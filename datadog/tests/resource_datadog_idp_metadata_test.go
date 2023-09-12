@@ -44,7 +44,7 @@ func TestAccDatadogIdpMetadataResource_main(t *testing.T) {
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `OrganizationsApi.UploadIdPMetadata`: %v\n", err)
-		// fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
 
 }

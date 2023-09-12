@@ -35,6 +35,7 @@ var Resources = []func() resource.Resource{
 	NewAPIKeyResource,
 	NewDashboardListResource,
 	NewDowntimeScheduleResource,
+	NewIdpMetadataResource,
 	NewIntegrationCloudflareAccountResource,
 	NewIntegrationConfluentAccountResource,
 	NewIntegrationConfluentResourceResource,
@@ -304,31 +305,6 @@ func (p *FrameworkProvider) ValidateConfigValues(ctx context.Context, config *Pr
 	}
 
 	return diags
-}
-
-func (p *FrameworkProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewAPIKeyResource,
-		NewSensitiveDataScannerGroupOrder,
-		NewIntegrationCloudflareAccountResource,
-		NewIntegrationConfluentAccountResource,
-		NewIntegrationConfluentResourceResource,
-		NewIntegrationFastlyAccountResource,
-		NewIntegrationFastlyServiceResource,
-		NewSpansMetricResource,
-		NewSyntheticsConcurrencyCapResource,
-		NewIdpMetadataResource,
-	}
-}
-
-func (p *FrameworkProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewIPRangesDataSource,
-		NewSensitiveDataScannerGroupOrderDatasource,
-		NewAPIKeyDataSource,
-		NewHostsDataSource,
-		NewDatadogIntegrationAWSNamespaceRulesDatasource,
-	}
 }
 
 // Helper method to configure the provider

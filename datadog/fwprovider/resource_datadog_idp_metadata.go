@@ -23,7 +23,7 @@ var (
 )
 
 func NewIdpMetadataResource() resource.Resource {
-	return &APIKeyResource{}
+	return &IdpMetadataResource{}
 }
 
 type IdpMetadataResource struct {
