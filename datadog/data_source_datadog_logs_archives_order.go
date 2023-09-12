@@ -14,14 +14,16 @@ func dataSourceDatadogLogsArchivesOrder() *schema.Resource {
 		Description: "Get the current order of your logs archives.",
 		ReadContext: dataSourceDatadogLogsArchivesOrderRead,
 
-		Schema: map[string]*schema.Schema{
-			// Computed values
-			"archive_ids": {
-				Description: "The archive IDs list. The order of archive IDs in this attribute defines the overall archive order for logs.",
-				Type:        schema.TypeList,
-				Computed:    true,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				// Computed values
+				"archive_ids": {
+					Description: "The archive IDs list. The order of archive IDs in this attribute defines the overall archive order for logs.",
+					Type:        schema.TypeList,
+					Computed:    true,
+					Elem:        &schema.Schema{Type: schema.TypeString},
+				},
+			}
 		},
 	}
 }
@@ -34,9 +36,6 @@ func dataSourceDatadogLogsArchivesOrderRead(ctx context.Context, d *schema.Resou
 	logsArchiveOrder, httpresp, err := apiInstances.GetLogsArchivesApiV2().GetLogsArchiveOrder(auth)
 	if err != nil {
 		return utils.TranslateClientErrorDiag(err, httpresp, "error querying the order of your logs archives")
-	}
-	if err := utils.CheckForUnparsed(logsArchiveOrder); err != nil {
-		return diag.FromErr(err)
 	}
 
 	if err := d.Set("archive_ids", logsArchiveOrder.Data.Attributes.ArchiveIds); err != nil {

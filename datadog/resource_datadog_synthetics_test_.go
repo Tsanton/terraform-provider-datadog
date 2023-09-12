@@ -17,7 +17,7 @@ import (
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV1"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -32,94 +32,96 @@ func resourceDatadogSyntheticsTest() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: map[string]*schema.Schema{
-			"type": {
-				Description:      "Synthetics test type.",
-				Type:             schema.TypeString,
-				Required:         true,
-				ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsTestDetailsTypeFromValue),
-			},
-			"subtype": {
-				Description: "The subtype of the Synthetic API test. Defaults to `http`.",
-				Type:        schema.TypeString,
-				Optional:    true,
-				DiffSuppressFunc: func(key, old, new string, d *schema.ResourceData) bool {
-					if d.Get("type") == "api" && old == "http" && new == "" {
-						// defaults to http if type is api for retro-compatibility
-						return true
-					}
-					return old == new
-				},
-				ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsTestDetailsSubTypeFromValue),
-			},
-			"request_definition": {
-				Description: "Required if `type = \"api\"`. The synthetics test request.",
-				Type:        schema.TypeList,
-				MaxItems:    1,
-				Optional:    true,
-				Elem:        syntheticsTestRequest(),
-			},
-			"request_headers":            syntheticsTestRequestHeaders(),
-			"request_query":              syntheticsTestRequestQuery(),
-			"request_basicauth":          syntheticsTestRequestBasicAuth(),
-			"request_proxy":              syntheticsTestRequestProxy(),
-			"request_client_certificate": syntheticsTestRequestClientCertificate(),
-			"assertion":                  syntheticsAPIAssertion(),
-			"browser_variable":           syntheticsBrowserVariable(),
-			"config_variable":            syntheticsConfigVariable(),
-			"device_ids": {
-				Description: "Required if `type = \"browser\"`. Array with the different device IDs used to run the test.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				Elem: &schema.Schema{
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				"type": {
+					Description:      "Synthetics test type.",
 					Type:             schema.TypeString,
-					ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsDeviceIDFromValue),
+					Required:         true,
+					ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsTestDetailsTypeFromValue),
 				},
-			},
-			"locations": {
-				Description: "Array of locations used to run the test. Refer to [the Datadog Synthetics location data source](https://registry.terraform.io/providers/DataDog/datadog/latest/docs/data-sources/synthetics_locations) to retrieve the list of locations.",
-				Type:        schema.TypeSet,
-				Required:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				"subtype": {
+					Description: "The subtype of the Synthetic API test. Defaults to `http`.",
+					Type:        schema.TypeString,
+					Optional:    true,
+					DiffSuppressFunc: func(key, old, new string, d *schema.ResourceData) bool {
+						if d.Get("type") == "api" && old == "http" && new == "" {
+							// defaults to http if type is api for retro-compatibility
+							return true
+						}
+						return old == new
+					},
+					ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsTestDetailsSubTypeFromValue),
 				},
-			},
-			"options_list": syntheticsTestOptionsList(),
-			"name": {
-				Description: "Name of Datadog synthetics test.",
-				Type:        schema.TypeString,
-				Required:    true,
-			},
-			"message": {
-				Description: "A message to include with notifications for this synthetics test. Email notifications can be sent to specific users by using the same `@username` notation as events.",
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-			},
-			"tags": {
-				Description: "A list of tags to associate with your synthetics test. This can help you categorize and filter tests in the manage synthetics page of the UI. Default is an empty list (`[]`).",
-				Type:        schema.TypeList,
-				Optional:    true,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-			"status": {
-				Description:      "Define whether you want to start (`live`) or pause (`paused`) a Synthetic test.",
-				Type:             schema.TypeString,
-				Required:         true,
-				ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsTestPauseStatusFromValue),
-			},
-			"monitor_id": {
-				Description: "ID of the monitor associated with the Datadog synthetics test.",
-				Type:        schema.TypeInt,
-				Computed:    true,
-			},
-			"browser_step": syntheticsTestBrowserStep(),
-			"api_step":     syntheticsTestAPIStep(),
-			"set_cookie": {
-				Description: "Cookies to be used for a browser test request, using the [Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) syntax.",
-				Type:        schema.TypeString,
-				Optional:    true,
-			},
+				"request_definition": {
+					Description: "Required if `type = \"api\"`. The synthetics test request.",
+					Type:        schema.TypeList,
+					MaxItems:    1,
+					Optional:    true,
+					Elem:        syntheticsTestRequest(),
+				},
+				"request_headers":            syntheticsTestRequestHeaders(),
+				"request_query":              syntheticsTestRequestQuery(),
+				"request_basicauth":          syntheticsTestRequestBasicAuth(),
+				"request_proxy":              syntheticsTestRequestProxy(),
+				"request_client_certificate": syntheticsTestRequestClientCertificate(),
+				"assertion":                  syntheticsAPIAssertion(),
+				"browser_variable":           syntheticsBrowserVariable(),
+				"config_variable":            syntheticsConfigVariable(),
+				"device_ids": {
+					Description: "Required if `type = \"browser\"`. Array with the different device IDs used to run the test.",
+					Type:        schema.TypeList,
+					Optional:    true,
+					Elem: &schema.Schema{
+						Type:             schema.TypeString,
+						ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsDeviceIDFromValue),
+					},
+				},
+				"locations": {
+					Description: "Array of locations used to run the test. Refer to [the Datadog Synthetics location data source](https://registry.terraform.io/providers/DataDog/datadog/latest/docs/data-sources/synthetics_locations) to retrieve the list of locations.",
+					Type:        schema.TypeSet,
+					Required:    true,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+				"options_list": syntheticsTestOptionsList(),
+				"name": {
+					Description: "Name of Datadog synthetics test.",
+					Type:        schema.TypeString,
+					Required:    true,
+				},
+				"message": {
+					Description: "A message to include with notifications for this synthetics test. Email notifications can be sent to specific users by using the same `@username` notation as events.",
+					Type:        schema.TypeString,
+					Optional:    true,
+					Default:     "",
+				},
+				"tags": {
+					Description: "A list of tags to associate with your synthetics test. This can help you categorize and filter tests in the manage synthetics page of the UI. Default is an empty list (`[]`).",
+					Type:        schema.TypeList,
+					Optional:    true,
+					Elem:        &schema.Schema{Type: schema.TypeString},
+				},
+				"status": {
+					Description:      "Define whether you want to start (`live`) or pause (`paused`) a Synthetic test.",
+					Type:             schema.TypeString,
+					Required:         true,
+					ValidateDiagFunc: validators.ValidateEnumValue(datadogV1.NewSyntheticsTestPauseStatusFromValue),
+				},
+				"monitor_id": {
+					Description: "ID of the monitor associated with the Datadog synthetics test.",
+					Type:        schema.TypeInt,
+					Computed:    true,
+				},
+				"browser_step": syntheticsTestBrowserStep(),
+				"api_step":     syntheticsTestAPIStep(),
+				"set_cookie": {
+					Description: "Cookies to be used for a browser test request, using the [Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) syntax.",
+					Type:        schema.TypeString,
+					Optional:    true,
+				},
+			}
 		},
 	}
 }
@@ -219,6 +221,11 @@ func syntheticsTestRequest() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"persist_cookies": {
+				Description: "Persist cookies across redirects.",
+				Type:        schema.TypeBool,
+				Optional:    true,
 			},
 		},
 	}
@@ -792,6 +799,11 @@ func syntheticsTestAPIStep() *schema.Schema {
 									},
 								},
 							},
+							"secure": {
+								Type:        schema.TypeBool,
+								Optional:    true,
+								Description: "Determines whether or not the extracted value will be obfuscated.",
+							},
 						},
 					},
 				},
@@ -1174,7 +1186,7 @@ func resourceDatadogSyntheticsTestCreate(ctx context.Context, d *schema.Resource
 
 	testType := getSyntheticsTestType(d)
 
-	if testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_API {
+	if *testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_API {
 		syntheticsTest := buildSyntheticsAPITestStruct(d)
 		createdSyntheticsTest, httpResponseCreate, err := apiInstances.GetSyntheticsApiV1().CreateSyntheticsAPITest(auth, *syntheticsTest)
 		if err != nil {
@@ -1187,17 +1199,17 @@ func resourceDatadogSyntheticsTestCreate(ctx context.Context, d *schema.Resource
 
 		var getSyntheticsApiTestResponse datadogV1.SyntheticsAPITest
 		var httpResponseGet *_nethttp.Response
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 			getSyntheticsApiTestResponse, httpResponseGet, err = apiInstances.GetSyntheticsApiV1().GetAPITest(auth, createdSyntheticsTest.GetPublicId())
 			if err != nil {
 				if httpResponseGet != nil && httpResponseGet.StatusCode == 404 {
-					return resource.RetryableError(fmt.Errorf("synthetics api test not created yet"))
+					return retry.RetryableError(fmt.Errorf("synthetics api test not created yet"))
 				}
 
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 			if err := utils.CheckForUnparsed(getSyntheticsApiTestResponse); err != nil {
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 
 			return nil
@@ -1209,7 +1221,7 @@ func resourceDatadogSyntheticsTestCreate(ctx context.Context, d *schema.Resource
 		d.SetId(getSyntheticsApiTestResponse.GetPublicId())
 
 		return updateSyntheticsAPITestLocalState(d, &getSyntheticsApiTestResponse)
-	} else if testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_BROWSER {
+	} else if *testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_BROWSER {
 		syntheticsTest := buildSyntheticsBrowserTestStruct(d)
 		createdSyntheticsTest, httpResponse, err := apiInstances.GetSyntheticsApiV1().CreateSyntheticsBrowserTest(auth, *syntheticsTest)
 		if err != nil {
@@ -1222,17 +1234,17 @@ func resourceDatadogSyntheticsTestCreate(ctx context.Context, d *schema.Resource
 
 		var getSyntheticsBrowserTestResponse datadogV1.SyntheticsBrowserTest
 		var httpResponseGet *_nethttp.Response
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 			getSyntheticsBrowserTestResponse, httpResponseGet, err = apiInstances.GetSyntheticsApiV1().GetBrowserTest(auth, createdSyntheticsTest.GetPublicId())
 			if err != nil {
 				if httpResponseGet != nil && httpResponseGet.StatusCode == 404 {
-					return resource.RetryableError(fmt.Errorf("synthetics browser test not created yet"))
+					return retry.RetryableError(fmt.Errorf("synthetics browser test not created yet"))
 				}
 
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 			if err := utils.CheckForUnparsed(getSyntheticsBrowserTestResponse); err != nil {
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 
 			return nil
@@ -1309,7 +1321,7 @@ func resourceDatadogSyntheticsTestUpdate(ctx context.Context, d *schema.Resource
 
 	testType := getSyntheticsTestType(d)
 
-	if testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_API {
+	if *testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_API {
 		syntheticsTest := buildSyntheticsAPITestStruct(d)
 		updatedTest, httpResponse, err := apiInstances.GetSyntheticsApiV1().UpdateAPITest(auth, d.Id(), *syntheticsTest)
 		if err != nil {
@@ -1320,7 +1332,7 @@ func resourceDatadogSyntheticsTestUpdate(ctx context.Context, d *schema.Resource
 			return diag.FromErr(err)
 		}
 		return updateSyntheticsAPITestLocalState(d, &updatedTest)
-	} else if testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_BROWSER {
+	} else if *testType == datadogV1.SYNTHETICSTESTDETAILSTYPE_BROWSER {
 		syntheticsTest := buildSyntheticsBrowserTestStruct(d)
 		updatedTest, httpResponse, err := apiInstances.GetSyntheticsApiV1().UpdateBrowserTest(auth, d.Id(), *syntheticsTest)
 		if err != nil {
@@ -1371,8 +1383,9 @@ func isTargetOfTypeInt(assertionType datadogV1.SyntheticsAssertionType, assertio
 	return false
 }
 
-func getSyntheticsTestType(d *schema.ResourceData) datadogV1.SyntheticsTestDetailsType {
-	return datadogV1.SyntheticsTestDetailsType(d.Get("type").(string))
+func getSyntheticsTestType(d *schema.ResourceData) *datadogV1.SyntheticsTestDetailsType {
+	v := datadogV1.SyntheticsTestDetailsType(d.Get("type").(string))
+	return &v
 }
 
 func buildSyntheticsAPITestStruct(d *schema.ResourceData) *datadogV1.SyntheticsAPITest {
@@ -1385,66 +1398,64 @@ func buildSyntheticsAPITestStruct(d *schema.ResourceData) *datadogV1.SyntheticsA
 		syntheticsTest.SetSubtype(datadogV1.SYNTHETICSTESTDETAILSSUBTYPE_HTTP)
 	}
 
-	k := utils.NewResourceDataKey(d, "")
-	parts := "request_definition.0"
-	k.Add(parts)
-
 	request := datadogV1.SyntheticsTestRequest{}
-	if attr, ok := k.GetOkWith("method"); ok {
+	if attr, ok := d.GetOk("request_definition.0.method"); ok {
 		request.SetMethod(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("url"); ok {
+	if attr, ok := d.GetOk("request_definition.0.url"); ok {
 		request.SetUrl(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("body"); ok {
+	if attr, ok := d.GetOk("request_definition.0.body"); ok {
 		request.SetBody(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("body_type"); ok {
+	if attr, ok := d.GetOk("request_definition.0.body_type"); ok {
 		request.SetBodyType(datadogV1.SyntheticsTestRequestBodyType(attr.(string)))
 	}
-	if attr, ok := k.GetOkWith("timeout"); ok {
+	if attr, ok := d.GetOk("request_definition.0.timeout"); ok {
 		request.SetTimeout(float64(attr.(int)))
 	}
-	if attr, ok := k.GetOkWith("host"); ok {
+	if attr, ok := d.GetOk("request_definition.0.host"); ok {
 		request.SetHost(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("port"); ok {
+	if attr, ok := d.GetOk("request_definition.0.port"); ok {
 		request.SetPort(int64(attr.(int)))
 	}
-	if attr, ok := k.GetOkWith("dns_server"); ok {
+	if attr, ok := d.GetOk("request_definition.0.dns_server"); ok {
 		request.SetDnsServer(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("dns_server_port"); ok {
+	if attr, ok := d.GetOk("request_definition.0.dns_server_port"); ok {
 		request.SetDnsServerPort(int32(attr.(int)))
 	}
-	if attr, ok := k.GetOkWith("no_saving_response_body"); ok {
+	if attr, ok := d.GetOk("request_definition.0.no_saving_response_body"); ok {
 		request.SetNoSavingResponseBody(attr.(bool))
 	}
-	if attr, ok := k.GetOkWith("number_of_packets"); ok {
+	if attr, ok := d.GetOk("request_definition.0.number_of_packets"); ok {
 		request.SetNumberOfPackets(int32(attr.(int)))
 	}
-	if attr, ok := k.GetOkWith("should_track_hops"); ok {
+	if attr, ok := d.GetOk("request_definition.0.should_track_hops"); ok {
 		request.SetShouldTrackHops(attr.(bool))
 	}
-	if attr, ok := k.GetOkWith("servername"); ok {
+	if attr, ok := d.GetOk("request_definition.0.servername"); ok {
 		request.SetServername(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("message"); ok {
+	if attr, ok := d.GetOk("request_definition.0.message"); ok {
 		request.SetMessage(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("call_type"); ok {
+	if attr, ok := d.GetOk("request_definition.0.call_type"); ok {
 		request.SetCallType(datadogV1.SyntheticsTestCallType(attr.(string)))
 	}
 	if syntheticsTest.GetSubtype() == "grpc" {
-		if attr, ok := k.GetOkWith("service"); ok {
+		if attr, ok := d.GetOk("request_definition.0.service"); ok {
 			request.SetService(attr.(string))
 		} else {
 			request.SetService("")
 		}
 	}
-	k.Remove(parts)
+	if attr, ok := d.GetOk("request_definition.0.persist_cookies"); ok {
+		request.SetPersistCookies(attr.(bool))
+	}
 
-	request = completeSyntheticsTestRequest(request, d.Get("request_headers").(map[string]interface{}), d.Get("request_query").(map[string]interface{}), d.Get("request_basicauth").([]interface{}), d.Get("request_client_certificate").([]interface{}), d.Get("request_proxy").([]interface{}))
+	request = *completeSyntheticsTestRequest(request, d.Get("request_headers").(map[string]interface{}), d.Get("request_query").(map[string]interface{}), d.Get("request_basicauth").([]interface{}), d.Get("request_client_certificate").([]interface{}), d.Get("request_proxy").([]interface{}))
 
 	config := datadogV1.NewSyntheticsAPITestConfigWithDefaults()
 
@@ -1513,9 +1524,10 @@ func buildSyntheticsAPITestStruct(d *schema.ResourceData) *datadogV1.SyntheticsA
 				request.SetTimeout(float64(requestMap["timeout"].(int)))
 				request.SetAllowInsecure(requestMap["allow_insecure"].(bool))
 				request.SetFollowRedirects(requestMap["follow_redirects"].(bool))
+				request.SetPersistCookies(requestMap["persist_cookies"].(bool))
 			}
 
-			request = completeSyntheticsTestRequest(request, stepMap["request_headers"].(map[string]interface{}), stepMap["request_query"].(map[string]interface{}), stepMap["request_basicauth"].([]interface{}), stepMap["request_client_certificate"].([]interface{}), stepMap["request_proxy"].([]interface{}))
+			request = *completeSyntheticsTestRequest(request, stepMap["request_headers"].(map[string]interface{}), stepMap["request_query"].(map[string]interface{}), stepMap["request_basicauth"].([]interface{}), stepMap["request_client_certificate"].([]interface{}), stepMap["request_proxy"].([]interface{}))
 
 			step.SetRequest(request)
 
@@ -1568,7 +1580,7 @@ func buildSyntheticsAPITestStruct(d *schema.ResourceData) *datadogV1.SyntheticsA
 	return syntheticsTest
 }
 
-func completeSyntheticsTestRequest(request datadogV1.SyntheticsTestRequest, requestHeaders map[string]interface{}, requestQuery map[string]interface{}, basicAuth []interface{}, requestClientCertificates []interface{}, requestProxy []interface{}) datadogV1.SyntheticsTestRequest {
+func completeSyntheticsTestRequest(request datadogV1.SyntheticsTestRequest, requestHeaders map[string]interface{}, requestQuery map[string]interface{}, basicAuth []interface{}, requestClientCertificates []interface{}, requestProxy []interface{}) *datadogV1.SyntheticsTestRequest {
 	if len(requestHeaders) > 0 {
 		headers := make(map[string]string, len(requestHeaders))
 
@@ -1585,7 +1597,7 @@ func completeSyntheticsTestRequest(request datadogV1.SyntheticsTestRequest, requ
 
 	if len(basicAuth) > 0 {
 		if requestBasicAuth, ok := basicAuth[0].(map[string]interface{}); ok {
-			if requestBasicAuth["type"] == "web" && requestBasicAuth["username"] != "" && requestBasicAuth["password"] != "" {
+			if requestBasicAuth["type"] == "web" && requestBasicAuth["username"] != "" {
 				basicAuth := datadogV1.NewSyntheticsBasicAuthWebWithDefaults()
 				basicAuth.SetPassword(requestBasicAuth["password"].(string))
 				basicAuth.SetUsername(requestBasicAuth["username"].(string))
@@ -1621,9 +1633,16 @@ func completeSyntheticsTestRequest(request datadogV1.SyntheticsTestRequest, requ
 				}
 				basicAuth := datadogV1.NewSyntheticsBasicAuthOauthClient(requestBasicAuth["access_token_url"].(string), requestBasicAuth["client_id"].(string), requestBasicAuth["client_secret"].(string), tokenApiAuthenticationValue)
 
-				basicAuth.SetAudience(requestBasicAuth["audience"].(string))
-				basicAuth.SetResource(requestBasicAuth["resource"].(string))
-				basicAuth.SetScope(requestBasicAuth["scope"].(string))
+				// optional fields for oauth must not be included if they have no value, or the authentication will fail
+				if v, ok := requestBasicAuth["audience"].(string); ok && v != "" {
+					basicAuth.SetAudience(v)
+				}
+				if v, ok := requestBasicAuth["resource"].(string); ok && v != "" {
+					basicAuth.SetResource(v)
+				}
+				if v, ok := requestBasicAuth["scope"].(string); ok && v != "" {
+					basicAuth.SetScope(v)
+				}
 
 				request.SetBasicAuth(datadogV1.SyntheticsBasicAuthOauthClientAsSyntheticsBasicAuth(basicAuth))
 			}
@@ -1640,11 +1659,18 @@ func completeSyntheticsTestRequest(request datadogV1.SyntheticsTestRequest, requ
 					tokenApiAuthenticationValue,
 					requestBasicAuth["username"].(string))
 
-				basicAuth.SetAudience(requestBasicAuth["audience"].(string))
+				// optional fields for oauth must not be included if they have no value, or the authentication will fail
+				if v, ok := requestBasicAuth["audience"].(string); ok && v != "" {
+					basicAuth.SetAudience(v)
+				}
+				if v, ok := requestBasicAuth["resource"].(string); ok && v != "" {
+					basicAuth.SetResource(v)
+				}
+				if v, ok := requestBasicAuth["scope"].(string); ok && v != "" {
+					basicAuth.SetScope(v)
+				}
 				basicAuth.SetClientId(requestBasicAuth["client_id"].(string))
 				basicAuth.SetClientSecret(requestBasicAuth["client_secret"].(string))
-				basicAuth.SetResource(requestBasicAuth["resource"].(string))
-				basicAuth.SetScope(requestBasicAuth["scope"].(string))
 
 				request.SetBasicAuth(datadogV1.SyntheticsBasicAuthOauthROPAsSyntheticsBasicAuth(basicAuth))
 			}
@@ -1714,7 +1740,7 @@ func completeSyntheticsTestRequest(request datadogV1.SyntheticsTestRequest, requ
 		}
 	}
 
-	return request
+	return &request
 }
 
 func buildAssertions(attr []interface{}) []datadogV1.SyntheticsAssertion {
@@ -1744,6 +1770,8 @@ func buildAssertions(attr []interface{}) []datadogV1.SyntheticsAssertion {
 						}
 						if v, ok := targetMap["targetvalue"]; ok {
 							switch datadogV1.SyntheticsAssertionOperator(operator.(string)) {
+							case datadogV1.SYNTHETICSASSERTIONOPERATOR_IS_UNDEFINED:
+								// no target value must be set for isUndefined operator
 							case
 								datadogV1.SYNTHETICSASSERTIONOPERATOR_LESS_THAN,
 								datadogV1.SYNTHETICSASSERTIONOPERATOR_MORE_THAN:
@@ -1993,25 +2021,22 @@ func buildTestOptions(d *schema.ResourceData) *datadogV1.SyntheticsTestOptions {
 
 func buildSyntheticsBrowserTestStruct(d *schema.ResourceData) *datadogV1.SyntheticsBrowserTest {
 	request := datadogV1.SyntheticsTestRequest{}
-	k := utils.NewResourceDataKey(d, "")
-	parts := "request_definition.0"
-	k.Add(parts)
-	if attr, ok := k.GetOkWith("method"); ok {
+	if attr, ok := d.GetOk("request_definition.0.method"); ok {
 		request.SetMethod(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("url"); ok {
+	if attr, ok := d.GetOk("request_definition.0.url"); ok {
 		request.SetUrl(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("body"); ok {
+	if attr, ok := d.GetOk("request_definition.0.body"); ok {
 		request.SetBody(attr.(string))
 	}
-	if attr, ok := k.GetOkWith("body_type"); ok {
+	if attr, ok := d.GetOk("request_definition.0.body_type"); ok {
 		request.SetBodyType(datadogV1.SyntheticsTestRequestBodyType(attr.(string)))
 	}
-	if attr, ok := k.GetOkWith("timeout"); ok {
+	if attr, ok := d.GetOk("request_definition.0.timeout"); ok {
 		request.SetTimeout(float64(attr.(int)))
 	}
-	if attr, ok := k.GetOkWith("certificate_domains"); ok {
+	if attr, ok := d.GetOk("request_definition.0.certificate_domains"); ok {
 		var certificateDomains []string
 
 		for _, s := range attr.([]interface{}) {
@@ -2019,7 +2044,7 @@ func buildSyntheticsBrowserTestStruct(d *schema.ResourceData) *datadogV1.Synthet
 		}
 		request.SetCertificateDomains(certificateDomains)
 	}
-	k.Remove(parts)
+
 	if attr, ok := d.GetOk("request_query"); ok {
 		query := attr.(map[string]interface{})
 		if len(query) > 0 {
@@ -2291,6 +2316,9 @@ func buildLocalRequest(request datadogV1.SyntheticsTestRequest) map[string]inter
 	if request.HasCertificateDomains() {
 		localRequest["certificate_domains"] = request.GetCertificateDomains()
 	}
+	if request.HasPersistCookies() {
+		localRequest["persist_cookies"] = request.GetPersistCookies()
+	}
 
 	return localRequest
 }
@@ -2397,18 +2425,32 @@ func buildLocalBasicAuth(basicAuth *datadogV1.SyntheticsBasicAuth) map[string]st
 		basicAuthSigv4 := basicAuth.SyntheticsBasicAuthSigv4
 		localAuth["access_key"] = basicAuthSigv4.AccessKey
 		localAuth["secret_key"] = basicAuthSigv4.SecretKey
-		localAuth["region"] = *basicAuthSigv4.Region
-		localAuth["session_token"] = *basicAuthSigv4.SessionToken
-		localAuth["service_name"] = *basicAuthSigv4.ServiceName
+		if v, ok := basicAuthSigv4.GetRegionOk(); ok {
+			localAuth["region"] = *v
+		}
+		if v, ok := basicAuthSigv4.GetSessionTokenOk(); ok {
+			localAuth["session_token"] = *v
+		}
+		if v, ok := basicAuthSigv4.GetServiceNameOk(); ok {
+			localAuth["service_name"] = *v
+		}
 		localAuth["type"] = "sigv4"
 	}
 
 	if basicAuth.SyntheticsBasicAuthNTLM != nil {
 		basicAuthNtlm := basicAuth.SyntheticsBasicAuthNTLM
-		localAuth["username"] = *basicAuthNtlm.Username
-		localAuth["password"] = *basicAuthNtlm.Password
-		localAuth["domain"] = *basicAuthNtlm.Domain
-		localAuth["workstation"] = *basicAuthNtlm.Workstation
+		if v, ok := basicAuthNtlm.GetUsernameOk(); ok {
+			localAuth["username"] = *v
+		}
+		if v, ok := basicAuthNtlm.GetPasswordOk(); ok {
+			localAuth["password"] = *v
+		}
+		if v, ok := basicAuthNtlm.GetDomainOk(); ok {
+			localAuth["domain"] = *v
+		}
+		if v, ok := basicAuthNtlm.GetWorkstationOk(); ok {
+			localAuth["workstation"] = *v
+		}
 		localAuth["type"] = "ntlm"
 	}
 
@@ -2418,21 +2460,36 @@ func buildLocalBasicAuth(basicAuth *datadogV1.SyntheticsBasicAuth) map[string]st
 		localAuth["client_id"] = basicAuthOauthClient.ClientId
 		localAuth["client_secret"] = basicAuthOauthClient.ClientSecret
 		localAuth["token_api_authentication"] = string(basicAuthOauthClient.TokenApiAuthentication)
-		localAuth["audience"] = *basicAuthOauthClient.Audience
-		localAuth["scope"] = *basicAuthOauthClient.Scope
-		localAuth["resource"] = *basicAuthOauthClient.Resource
-
+		if v, ok := basicAuthOauthClient.GetAudienceOk(); ok {
+			localAuth["audience"] = *v
+		}
+		if v, ok := basicAuthOauthClient.GetScopeOk(); ok {
+			localAuth["scope"] = *v
+		}
+		if v, ok := basicAuthOauthClient.GetResourceOk(); ok {
+			localAuth["resource"] = *v
+		}
 		localAuth["type"] = "oauth-client"
 	}
 	if basicAuth.SyntheticsBasicAuthOauthROP != nil {
 		basicAuthOauthROP := basicAuth.SyntheticsBasicAuthOauthROP
 		localAuth["access_token_url"] = basicAuthOauthROP.AccessTokenUrl
-		localAuth["client_id"] = *basicAuthOauthROP.ClientId
-		localAuth["client_secret"] = *basicAuthOauthROP.ClientSecret
+		if v, ok := basicAuthOauthROP.GetClientIdOk(); ok {
+			localAuth["client_id"] = *v
+		}
+		if v, ok := basicAuthOauthROP.GetClientSecretOk(); ok {
+			localAuth["client_secret"] = *v
+		}
 		localAuth["token_api_authentication"] = string(basicAuthOauthROP.TokenApiAuthentication)
-		localAuth["audience"] = *basicAuthOauthROP.Audience
-		localAuth["scope"] = *basicAuthOauthROP.Scope
-		localAuth["resource"] = *basicAuthOauthROP.Resource
+		if v, ok := basicAuthOauthROP.GetAudienceOk(); ok {
+			localAuth["audience"] = *v
+		}
+		if v, ok := basicAuthOauthROP.GetScopeOk(); ok {
+			localAuth["scope"] = *v
+		}
+		if v, ok := basicAuthOauthROP.GetResourceOk(); ok {
+			localAuth["resource"] = *v
+		}
 		localAuth["username"] = basicAuthOauthROP.Username
 		localAuth["password"] = basicAuthOauthROP.Password
 
@@ -2470,6 +2527,10 @@ func buildExtractedValues(stepExtractedValues []interface{}) []datadogV1.Synthet
 
 		value.SetParser(parser)
 
+		if secure, ok := extractedValueMap["secure"].(bool); ok {
+			value.SetSecure(secure)
+		}
+
 		values[i] = value
 	}
 
@@ -2484,6 +2545,7 @@ func buildLocalExtractedValues(extractedValues []datadogV1.SyntheticsParsingOpti
 		localExtractedValue["name"] = extractedValue.GetName()
 		localExtractedValue["type"] = string(extractedValue.GetType())
 		localExtractedValue["field"] = extractedValue.GetField()
+		localExtractedValue["secure"] = extractedValue.GetSecure()
 
 		parser := extractedValue.GetParser()
 		localParser := make(map[string]interface{})
@@ -2744,12 +2806,12 @@ func updateSyntheticsBrowserTestLocalState(d *schema.ResourceData, syntheticsTes
 		}
 		if v, ok := variable.GetExampleOk(); ok {
 			localVariable["example"] = *v
-		} else if localVariable["secure"].(bool) {
+		} else if v, ok := localVariable["secure"].(bool); ok && v {
 			localVariable["example"] = d.Get(fmt.Sprintf("browser_variable.%d.example", i))
 		}
 		if v, ok := variable.GetPatternOk(); ok {
 			localVariable["pattern"] = *v
-		} else if localVariable["secure"].(bool) {
+		} else if v, ok := localVariable["secure"].(bool); ok && v {
 			localVariable["pattern"] = d.Get(fmt.Sprintf("browser_variable.%d.pattern", i))
 		}
 		localBrowserVariables[i] = localVariable
@@ -2950,12 +3012,12 @@ func updateSyntheticsAPITestLocalState(d *schema.ResourceData, syntheticsTest *d
 		if configVariable.GetType() != "global" {
 			if v, ok := configVariable.GetExampleOk(); ok {
 				localVariable["example"] = *v
-			} else if localVariable["secure"].(bool) {
+			} else if v, ok := localVariable["secure"].(bool); ok && v {
 				localVariable["example"] = d.Get(fmt.Sprintf("config_variable.%d.example", i))
 			}
 			if v, ok := configVariable.GetPatternOk(); ok {
 				localVariable["pattern"] = *v
-			} else if localVariable["secure"].(bool) {
+			} else if v, ok := localVariable["secure"].(bool); ok && v {
 				localVariable["pattern"] = d.Get(fmt.Sprintf("config_variable.%d.pattern", i))
 			}
 		}

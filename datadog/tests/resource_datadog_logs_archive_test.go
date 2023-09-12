@@ -2,15 +2,16 @@ package test
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"testing"
 
 	"github.com/terraform-providers/terraform-provider-datadog/datadog"
 	"github.com/terraform-providers/terraform-provider-datadog/datadog/internal/utils"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // Test
@@ -19,7 +20,7 @@ func archiveAzureConfigForCreation(uniq string) string {
 	return fmt.Sprintf(`
 resource "datadog_integration_azure" "an_azure_integration" {
   tenant_name   = "%s"
-  client_id     = "testc7f6-1234-5678-9101-3fcbf464test"
+  client_id     = "a75fbdd2-ade6-43d0-a810-4d886c53871e"
   client_secret = "testingx./Sw*g/Y33t..R1cH+hScMDt"
 }
 
@@ -30,18 +31,18 @@ resource "datadog_logs_archive" "my_azure_archive" {
   azure_archive {
     container 		= "my-container"
     tenant_id 		= "%s"
-    client_id       = "testc7f6-1234-5678-9101-3fcbf464test"
+    client_id       = "a75fbdd2-ade6-43d0-a810-4d886c53871e"
     storage_account = "storageaccount"
     path            = "/path/blou"
   }
-}
-`, uniq, uniq)
+}`, uniq, uniq)
 }
 
 func TestAccDatadogLogsArchiveAzure_basic(t *testing.T) {
 	t.Parallel()
 	ctx, accProviders := testAccProviders(context.Background(), t)
-	tenantName := uniqueEntityName(ctx, t)
+	unique_hash := fmt.Sprintf("%x", sha256.Sum256([]byte(uniqueEntityName(ctx, t))))
+	tenantName := fmt.Sprintf("%s-%s-%s-%s-%s", unique_hash[:8], unique_hash[8:12], unique_hash[12:16], unique_hash[16:20], unique_hash[20:32])
 	accProvider := testAccProvider(t, accProviders)
 
 	resource.Test(t, resource.TestCase{
@@ -60,7 +61,7 @@ func TestAccDatadogLogsArchiveAzure_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"datadog_logs_archive.my_azure_archive", "azure_archive.0.container", "my-container"),
 					resource.TestCheckResourceAttr(
-						"datadog_logs_archive.my_azure_archive", "azure_archive.0.client_id", "testc7f6-1234-5678-9101-3fcbf464test"),
+						"datadog_logs_archive.my_azure_archive", "azure_archive.0.client_id", "a75fbdd2-ade6-43d0-a810-4d886c53871e"),
 					resource.TestCheckResourceAttr(
 						"datadog_logs_archive.my_azure_archive", "azure_archive.0.tenant_id", tenantName),
 					resource.TestCheckResourceAttr(
@@ -104,6 +105,9 @@ resource "datadog_logs_archive" "my_gcs_archive" {
 
 func TestAccDatadogLogsArchiveGCS_basic(t *testing.T) {
 	t.Parallel()
+	if !isReplaying() {
+		t.Skip("This test only supports replaying")
+	}
 	ctx, accProviders := testAccProviders(context.Background(), t)
 	client := uniqueEntityName(ctx, t)
 	accProvider := testAccProvider(t, accProviders)

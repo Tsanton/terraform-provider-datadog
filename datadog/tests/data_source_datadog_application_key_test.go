@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccDatadogApplgicationKeyDatasource_matchId(t *testing.T) {
+func TestAccDatadogApplicationKeyDatasource_matchId(t *testing.T) {
 	if isRecording() || isReplaying() {
 		t.Skip("This test doesn't support recording or replaying")
 	}

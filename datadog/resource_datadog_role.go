@@ -10,7 +10,7 @@ import (
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -29,32 +29,34 @@ func resourceDatadogRole() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		CustomizeDiff: resourceDatadogRoleCustomizeDiff,
-		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Name of the role.",
-			},
-			"permission": {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Description: "Set of objects containing the permission ID and the name of the permissions granted to this role.",
-				Elem:        GetRolePermissionSchema(),
-			},
-			"user_count": {
-				Type:        schema.TypeInt,
-				Computed:    true,
-				Description: "Number of users that have this role.",
-			},
-			"validate": {
-				Description: "If set to `false`, skip the validation call done during plan.",
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					// This is never sent to the backend, so it should never generate a diff
-					return true
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				"name": {
+					Type:        schema.TypeString,
+					Required:    true,
+					Description: "Name of the role.",
 				},
-			},
+				"permission": {
+					Type:        schema.TypeSet,
+					Optional:    true,
+					Description: "Set of objects containing the permission ID and the name of the permissions granted to this role.",
+					Elem:        GetRolePermissionSchema(),
+				},
+				"user_count": {
+					Type:        schema.TypeInt,
+					Computed:    true,
+					Description: "Number of users that have this role.",
+				},
+				"validate": {
+					Description: "If set to `false`, skip the validation call done during plan.",
+					Type:        schema.TypeBool,
+					Optional:    true,
+					DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+						// This is never sent to the backend, so it should never generate a diff
+						return true
+					},
+				},
+			}
 		},
 	}
 }
@@ -137,7 +139,7 @@ func resourceDatadogRoleCreate(ctx context.Context, d *schema.ResourceData, meta
 	auth := meta.(*ProviderConfiguration).Auth
 
 	roleReq := buildRoleCreateRequest(d)
-	createResp, httpResponse, err := apiInstances.GetRolesApiV2().CreateRole(auth, roleReq)
+	createResp, httpResponse, err := apiInstances.GetRolesApiV2().CreateRole(auth, *roleReq)
 	if err != nil {
 		return utils.TranslateClientErrorDiag(err, httpResponse, "error creating role")
 	}
@@ -147,17 +149,17 @@ func resourceDatadogRoleCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	var getRoleResponse datadogV2.RoleResponse
 	var httpResponseGet *http.Response
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 		getRoleResponse, httpResponseGet, err = apiInstances.GetRolesApiV2().GetRole(auth, createResp.Data.GetId())
 		if err != nil {
 			if httpResponseGet != nil && httpResponseGet.StatusCode == 404 {
-				return resource.RetryableError(fmt.Errorf("role not created yet"))
+				return retry.RetryableError(fmt.Errorf("role not created yet"))
 			}
 
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 		if err := utils.CheckForUnparsed(getRoleResponse); err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		return nil
@@ -264,7 +266,7 @@ func resourceDatadogRoleUpdate(ctx context.Context, d *schema.ResourceData, meta
 
 	if d.HasChange("name") || d.HasChange("permission") {
 		roleReq := buildRoleUpdateRequest(d)
-		resp, httpResponse, err := apiInstances.GetRolesApiV2().UpdateRole(auth, d.Id(), roleReq)
+		resp, httpResponse, err := apiInstances.GetRolesApiV2().UpdateRole(auth, d.Id(), *roleReq)
 		if err != nil {
 			return utils.TranslateClientErrorDiag(err, httpResponse, "error updating role")
 		}
@@ -292,7 +294,7 @@ func resourceDatadogRoleDelete(ctx context.Context, d *schema.ResourceData, meta
 	return nil
 }
 
-func buildRoleCreateRequest(d *schema.ResourceData) datadogV2.RoleCreateRequest {
+func buildRoleCreateRequest(d *schema.ResourceData) *datadogV2.RoleCreateRequest {
 	roleCreateRequest := datadogV2.NewRoleCreateRequestWithDefaults()
 	roleCreateData := datadogV2.NewRoleCreateDataWithDefaults()
 	roleCreateAttrs := datadogV2.NewRoleCreateAttributesWithDefaults()
@@ -319,10 +321,10 @@ func buildRoleCreateRequest(d *schema.ResourceData) datadogV2.RoleCreateRequest 
 	roleCreateData.SetRelationships(*roleCreateRelations)
 
 	roleCreateRequest.SetData(*roleCreateData)
-	return *roleCreateRequest
+	return roleCreateRequest
 }
 
-func buildRoleUpdateRequest(d *schema.ResourceData) datadogV2.RoleUpdateRequest {
+func buildRoleUpdateRequest(d *schema.ResourceData) *datadogV2.RoleUpdateRequest {
 	roleUpdateRequest := datadogV2.NewRoleUpdateRequestWithDefaults()
 	roleUpdateData := datadogV2.NewRoleUpdateDataWithDefaults()
 	roleUpdateAttributes := datadogV2.NewRoleUpdateAttributesWithDefaults()
@@ -357,5 +359,5 @@ func buildRoleUpdateRequest(d *schema.ResourceData) datadogV2.RoleUpdateRequest 
 	roleUpdateData.SetRelationships(*roleUpdateRelations)
 
 	roleUpdateRequest.SetData(*roleUpdateData)
-	return *roleUpdateRequest
+	return roleUpdateRequest
 }

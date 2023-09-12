@@ -23,46 +23,48 @@ func dataSourceDatadogSecurityMonitoringRules() *schema.Resource {
 		Description: "Use this data source to retrieve information about existing security monitoring rules for use in other resources.",
 		ReadContext: dataSourceDatadogSecurityMonitoringRulesRead,
 
-		Schema: map[string]*schema.Schema{
-			// Filters
-			"name_filter": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Description:  "A rule name to limit the search",
-				ValidateFunc: validation.StringIsNotEmpty,
-			},
-			"tags_filter": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "A list of tags to limit the search",
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-			"default_only_filter": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Limit the search to default rules",
-			},
-			"user_only_filter": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Limit the search to user rules",
-			},
-
-			// Computed
-			"rule_ids": {
-				Description: "List of IDs of the matched rules.",
-				Type:        schema.TypeList,
-				Computed:    true,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-			"rules": {
-				Description: "List of rules.",
-				Type:        schema.TypeList,
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: datadogSecurityMonitoringRuleSchema(),
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				// Filters
+				"name_filter": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					Description:  "A rule name to limit the search",
+					ValidateFunc: validation.StringIsNotEmpty,
 				},
-			},
+				"tags_filter": {
+					Type:        schema.TypeList,
+					Optional:    true,
+					Description: "A list of tags to limit the search",
+					Elem:        &schema.Schema{Type: schema.TypeString},
+				},
+				"default_only_filter": {
+					Type:        schema.TypeBool,
+					Optional:    true,
+					Description: "Limit the search to default rules",
+				},
+				"user_only_filter": {
+					Type:        schema.TypeBool,
+					Optional:    true,
+					Description: "Limit the search to user rules",
+				},
+
+				// Computed
+				"rule_ids": {
+					Description: "List of IDs of the matched rules.",
+					Type:        schema.TypeList,
+					Computed:    true,
+					Elem:        &schema.Schema{Type: schema.TypeString},
+				},
+				"rules": {
+					Description: "List of rules.",
+					Type:        schema.TypeList,
+					Computed:    true,
+					Elem: &schema.Resource{
+						Schema: datadogSecurityMonitoringRuleSchema(),
+					},
+				},
+			}
 		},
 	}
 }
@@ -106,7 +108,6 @@ func dataSourceDatadogSecurityMonitoringRulesRead(ctx context.Context, d *schema
 	ruleIds := make([]string, 0)
 	rules := make([]map[string]interface{}, 0)
 	page := int64(0)
-
 	for {
 		response, httpresp, err := apiInstances.GetSecurityMonitoringApiV2().ListSecurityMonitoringRules(auth,
 			datadogV2.ListSecurityMonitoringRulesOptionalParameters{
@@ -116,9 +117,6 @@ func dataSourceDatadogSecurityMonitoringRulesRead(ctx context.Context, d *schema
 
 		if err != nil {
 			return utils.TranslateClientErrorDiag(err, httpresp, "error listing rules")
-		}
-		if err := utils.CheckForUnparsed(response); err != nil {
-			return diag.FromErr(err)
 		}
 
 		for _, ruleR := range response.GetData() {

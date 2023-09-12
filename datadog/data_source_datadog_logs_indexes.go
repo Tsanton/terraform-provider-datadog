@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/terraform-providers/terraform-provider-datadog/datadog/internal/utils"
 
@@ -13,54 +14,57 @@ func dataSourceDatadogLogsIndexes() *schema.Resource {
 	return &schema.Resource{
 		Description: "Use this data source to list several existing logs indexes for use in other resources.",
 		ReadContext: dataSourceDatadogLogsIndexesRead,
-		Schema: map[string]*schema.Schema{
-			// Computed values
-			"logs_indexes": {
-				Description: "List of logs indexes",
-				Type:        schema.TypeList,
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Description: "The name of the index.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"daily_limit": {
-							Description: "The number of log events you can send in this index per day before you are rate-limited.",
-							Type:        schema.TypeInt,
-							Computed:    true,
-						},
-						"retention_days": {
-							Description: "The number of days before logs are deleted from this index.",
-							Type:        schema.TypeInt,
-							Computed:    true,
-						},
-						"filter": {
-							Description: "Logs filter",
-							Type:        schema.TypeList,
-							Computed:    true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"query": {
-										Description: "Logs filter criteria. Only logs matching this filter criteria are considered for this index.",
-										Type:        schema.TypeString,
-										Required:    true,
+
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				// Computed values
+				"logs_indexes": {
+					Description: "List of logs indexes",
+					Type:        schema.TypeList,
+					Computed:    true,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"name": {
+								Description: "The name of the index.",
+								Type:        schema.TypeString,
+								Computed:    true,
+							},
+							"daily_limit": {
+								Description: "The number of log events you can send in this index per day before you are rate-limited.",
+								Type:        schema.TypeInt,
+								Computed:    true,
+							},
+							"retention_days": {
+								Description: "The number of days before logs are deleted from this index.",
+								Type:        schema.TypeInt,
+								Computed:    true,
+							},
+							"filter": {
+								Description: "Logs filter",
+								Type:        schema.TypeList,
+								Computed:    true,
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"query": {
+											Description: "Logs filter criteria. Only logs matching this filter criteria are considered for this index.",
+											Type:        schema.TypeString,
+											Required:    true,
+										},
 									},
 								},
 							},
-						},
-						"exclusion_filter": {
-							Description: "List of exclusion filters.",
-							Type:        schema.TypeList,
-							Computed:    true,
-							Elem: &schema.Resource{
-								Schema: dataSourceLogsIndexesExclusionFilterSchema,
+							"exclusion_filter": {
+								Description: "List of exclusion filters.",
+								Type:        schema.TypeList,
+								Computed:    true,
+								Elem: &schema.Resource{
+									Schema: dataSourceLogsIndexesExclusionFilterSchema,
+								},
 							},
 						},
 					},
 				},
-			},
+			}
 		},
 	}
 }
@@ -105,12 +109,19 @@ func dataSourceDatadogLogsIndexesRead(ctx context.Context, d *schema.ResourceDat
 	if err != nil {
 		return utils.TranslateClientErrorDiag(err, httpresp, "error querying log indexes")
 	}
-	if err := utils.CheckForUnparsed(logsIndexes); err != nil {
-		return diag.FromErr(err)
-	}
 
+	diags := diag.Diagnostics{}
 	tfLogsIndexes := make([]map[string]interface{}, len(logsIndexes.GetIndexes()))
 	for i, l := range logsIndexes.GetIndexes() {
+		if err := utils.CheckForUnparsed(l); err != nil {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  fmt.Sprintf("skipping logs index with name: %s", l.GetName()),
+				Detail:   fmt.Sprintf("logs index contains unparsed object: %v", err),
+			})
+			continue
+		}
+
 		tfLogsIndexes[i] = map[string]interface{}{
 			"name":             l.GetName(),
 			"daily_limit":      l.GetDailyLimit(),
@@ -125,5 +136,5 @@ func dataSourceDatadogLogsIndexesRead(ctx context.Context, d *schema.ResourceDat
 
 	d.SetId("log-indexes")
 
-	return nil
+	return diags
 }

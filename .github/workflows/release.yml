@@ -22,7 +22,7 @@ jobs:
 
       - name: Create tag
         id: create_tag
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         env:
           RELEASE_BRANCH: ${{ github.head_ref }}
         with:
@@ -38,15 +38,15 @@ jobs:
             core.setOutput("tag_name", tagName);
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ steps.create_tag.outputs.tag_name }}
       - name: Unshallow
         run: git fetch --prune --unshallow
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.19
+          go-version: "1.20"
       - name: Import GPG key
         id: import_gpg
         uses: paultyng/ghaction-import-gpg@v2.1.0

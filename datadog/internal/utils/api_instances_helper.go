@@ -50,8 +50,10 @@ type ApiInstances struct {
 	cloudWorkloadSecurityApiV2 *datadogV2.CloudWorkloadSecurityApi
 	confluentCloudApiV2        *datadogV2.ConfluentCloudApi
 	dashboardListsApiV2        *datadogV2.DashboardListsApi
+	downtimesApiV2             *datadogV2.DowntimesApi
 	eventsApiV2                *datadogV2.EventsApi
 	fastlyIntegrationApiV2     *datadogV2.FastlyIntegrationApi
+	gcpStsIntegrationApiV2     *datadogV2.GCPIntegrationApi
 	incidentServicesApiV2      *datadogV2.IncidentServicesApi
 	incidentTeamsApiV2         *datadogV2.IncidentTeamsApi
 	incidentsApiV2             *datadogV2.IncidentsApi
@@ -65,6 +67,7 @@ type ApiInstances struct {
 	opsgenieIntegrationApiV2   *datadogV2.OpsgenieIntegrationApi
 	organizationsApiV2         *datadogV2.OrganizationsApi
 	processesApiV2             *datadogV2.ProcessesApi
+	restrictionPolicyApiV2     *datadogV2.RestrictionPoliciesApi
 	rolesApiV2                 *datadogV2.RolesApi
 	rumApiV2                   *datadogV2.RUMApi
 	securityMonitoringApiV2    *datadogV2.SecurityMonitoringApi
@@ -72,6 +75,7 @@ type ApiInstances struct {
 	serviceAccountsApiV2       *datadogV2.ServiceAccountsApi
 	spansMetricsApiV2          *datadogV2.SpansMetricsApi
 	syntheticsApiV2            *datadogV2.SyntheticsApi
+	teamsApiV2                 *datadogV2.TeamsApi
 	usageMeteringApiV2         *datadogV2.UsageMeteringApi
 	usersApiV2                 *datadogV2.UsersApi
 }
@@ -348,6 +352,14 @@ func (i *ApiInstances) GetCloudWorkloadSecurityApiV2() *datadogV2.CloudWorkloadS
 	return i.cloudWorkloadSecurityApiV2
 }
 
+// GetDowntimesApiV2 get instance of DowntimesApi
+func (i *ApiInstances) GetDowntimesApiV2() *datadogV2.DowntimesApi {
+	if i.downtimesApiV2 == nil {
+		i.downtimesApiV2 = datadogV2.NewDowntimesApi(i.HttpClient)
+	}
+	return i.downtimesApiV2
+}
+
 // GetDashboardListsApiV2 get instance of DashboardListsApi
 func (i *ApiInstances) GetDashboardListsApiV2() *datadogV2.DashboardListsApi {
 	if i.dashboardListsApiV2 == nil {
@@ -362,6 +374,14 @@ func (i *ApiInstances) GetEventsApiV2() *datadogV2.EventsApi {
 		i.eventsApiV2 = datadogV2.NewEventsApi(i.HttpClient)
 	}
 	return i.eventsApiV2
+}
+
+// GetGCPStsIntegrationApiV2 get instance of GetGCPStsIntegration
+func (i *ApiInstances) GetGCPIntegrationApiV2() *datadogV2.GCPIntegrationApi {
+	if i.gcpStsIntegrationApiV2 == nil {
+		i.gcpStsIntegrationApiV2 = datadogV2.NewGCPIntegrationApi(i.HttpClient)
+	}
+	return i.gcpStsIntegrationApiV2
 }
 
 // GetIncidentServicesApiV2 get instance of IncidentServicesApi
@@ -546,6 +566,22 @@ func (i *ApiInstances) GetFastlyIntegrationApiV2() *datadogV2.FastlyIntegrationA
 		i.fastlyIntegrationApiV2 = datadogV2.NewFastlyIntegrationApi(i.HttpClient)
 	}
 	return i.fastlyIntegrationApiV2
+}
+
+// GetRestrictionPoliciesApiV2 get instance of RestrictionPoliciesApi
+func (i *ApiInstances) GetRestrictionPoliciesApiV2() *datadogV2.RestrictionPoliciesApi {
+	if i.restrictionPolicyApiV2 == nil {
+		i.restrictionPolicyApiV2 = datadogV2.NewRestrictionPoliciesApi(i.HttpClient)
+	}
+	return i.restrictionPolicyApiV2
+}
+
+// GetTeamsApiV2 get instance of TeamsApi
+func (i *ApiInstances) GetTeamsApiV2() *datadogV2.TeamsApi {
+	if i.teamsApiV2 == nil {
+		i.teamsApiV2 = datadogV2.NewTeamsApi(i.HttpClient)
+	}
+	return i.teamsApiV2
 }
 
 // GetSpansMetricsApiV2 get instance of SpansMetricsApi

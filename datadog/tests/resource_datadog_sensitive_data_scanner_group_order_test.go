@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func GroupOrderConfig(uniq string) string {
@@ -18,6 +18,7 @@ resource "datadog_sensitive_data_scanner_group_order" "foo" {
 }
 
 resource "datadog_sensitive_data_scanner_group" "mygroup" {
+	depends_on = [data.datadog_sensitive_data_scanner_group_order.foo]
 	name        = "%s"
 	description = "A relevant description"
 	filter {

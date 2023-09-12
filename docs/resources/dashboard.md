@@ -620,6 +620,16 @@ resource "datadog_dashboard" "free_dashboard" {
           }
         }
       }
+      request {
+        display_type = "overlay"
+        query {
+          metric_query {
+            name        = "MyOverlay"
+            data_source = "metrics"
+            query       = "avg:system.cpu.user{host:COMP-QJWVM2FYT4}"
+          }
+        }
+      }
     }
     widget_layout {
       height = 16
@@ -689,7 +699,7 @@ resource "datadog_dashboard" "free_dashboard" {
 
 ### Optional
 
-- `dashboard_lists` (Set of Number) A list of dashboard lists this dashboard belongs to.
+- `dashboard_lists` (Set of Number) A list of dashboard lists this dashboard belongs to. This attribute should not be set if managing the corresponding dashboard lists using Terraform as it causes inconsistent behavior.
 - `description` (String) The description of the dashboard.
 - `is_read_only` (Boolean, Deprecated) Whether this dashboard is read-only. **Deprecated.** Prefer using `restricted_roles` to define which roles are required to edit the dashboard.
 - `notify_list` (Set of String) The list of handles for the users to notify when changes are made to this dashboard.
@@ -765,7 +775,7 @@ Optional:
 - `note_definition` (Block List, Max: 1) The definition for a Note widget. (see [below for nested schema](#nestedblock--widget--note_definition))
 - `query_table_definition` (Block List, Max: 1) The definition for a Query Table widget. (see [below for nested schema](#nestedblock--widget--query_table_definition))
 - `query_value_definition` (Block List, Max: 1) The definition for a Query Value widget. (see [below for nested schema](#nestedblock--widget--query_value_definition))
-- `run_workflow_definition` (Block List, Max: 1) The definition for a Run Workflow widget. **NOTE:** Currently in private beta. To request access, contact Support at support@datadoghq.com. (see [below for nested schema](#nestedblock--widget--run_workflow_definition))
+- `run_workflow_definition` (Block List, Max: 1) The definition for a Run Workflow widget. (see [below for nested schema](#nestedblock--widget--run_workflow_definition))
 - `scatterplot_definition` (Block List, Max: 1) The definition for a Scatterplot widget. (see [below for nested schema](#nestedblock--widget--scatterplot_definition))
 - `service_level_objective_definition` (Block List, Max: 1) The definition for a Service Level Objective widget. (see [below for nested schema](#nestedblock--widget--service_level_objective_definition))
 - `servicemap_definition` (Block List, Max: 1) The definition for a Service Map widget. (see [below for nested schema](#nestedblock--widget--servicemap_definition))
@@ -942,7 +952,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -1213,6 +1223,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -1717,7 +1728,6 @@ Optional:
 
 - `event_size` (String) The size to use to display an event. Valid values are `s`, `l`.
 - `live_span` (String) The timeframe to use when displaying the widget. Valid values are `1m`, `5m`, `10m`, `15m`, `30m`, `1h`, `4h`, `1d`, `2d`, `1w`, `1mo`, `3mo`, `6mo`, `1y`, `alert`.
-- `show_year` (Boolean) Whether to show the year in the date column of the widget or not.
 - `tags_execution` (String) The execution method for multi-value filters, options: `and` or `or`.
 - `title` (String) The title of the widget.
 - `title_align` (String) The alignment of the widget's title. Valid values are `center`, `left`, `right`.
@@ -1821,7 +1831,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -2078,6 +2088,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -2198,7 +2209,7 @@ Optional:
 - `note_definition` (Block List, Max: 1) The definition for a Note widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--note_definition))
 - `query_table_definition` (Block List, Max: 1) The definition for a Query Table widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--query_table_definition))
 - `query_value_definition` (Block List, Max: 1) The definition for a Query Value widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--query_value_definition))
-- `run_workflow_definition` (Block List, Max: 1) The definition for a Run Workflow widget. **NOTE:** Currently in private beta. To request access, contact Support at support@datadoghq.com. (see [below for nested schema](#nestedblock--widget--group_definition--widget--run_workflow_definition))
+- `run_workflow_definition` (Block List, Max: 1) The definition for a Run Workflow widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--run_workflow_definition))
 - `scatterplot_definition` (Block List, Max: 1) The definition for a Scatterplot widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--scatterplot_definition))
 - `service_level_objective_definition` (Block List, Max: 1) The definition for a Service Level Objective widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--service_level_objective_definition))
 - `servicemap_definition` (Block List, Max: 1) The definition for a Service Map widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--servicemap_definition))
@@ -2375,7 +2386,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -2646,6 +2657,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -3150,7 +3162,6 @@ Optional:
 
 - `event_size` (String) The size to use to display an event. Valid values are `s`, `l`.
 - `live_span` (String) The timeframe to use when displaying the widget. Valid values are `1m`, `5m`, `10m`, `15m`, `30m`, `1h`, `4h`, `1d`, `2d`, `1w`, `1mo`, `3mo`, `6mo`, `1y`, `alert`.
-- `show_year` (Boolean) Whether to show the year in the date column of the widget or not.
 - `tags_execution` (String) The execution method for multi-value filters, options: `and` or `or`.
 - `title` (String) The title of the widget.
 - `title_align` (String) The alignment of the widget's title. Valid values are `center`, `left`, `right`.
@@ -3254,7 +3265,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -3511,6 +3522,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -4613,14 +4625,24 @@ Required:
 
 Required:
 
-- `data_source` (String) Source from which to query items to display in the stream. Valid values are `logs_stream`, `audit_stream`, `ci_pipeline_stream`, `ci_test_stream`, `rum_issue_stream`, `apm_issue_stream`, `logs_issue_stream`, `logs_pattern_stream`, `logs_transaction_stream`, `event_stream`.
+- `data_source` (String) Source from which to query items to display in the stream. Valid values are `logs_stream`, `audit_stream`, `ci_pipeline_stream`, `ci_test_stream`, `rum_issue_stream`, `apm_issue_stream`, `trace_stream`, `logs_issue_stream`, `logs_pattern_stream`, `logs_transaction_stream`, `event_stream`.
 
 Optional:
 
 - `event_size` (String) Size of events displayed in widget. Required if `data_source` is `event_stream`. Valid values are `s`, `l`.
 - `indexes` (List of String) List of indexes.
 - `query_string` (String) Widget query.
+- `sort` (Block List, Max: 1) The facet and order to sort the data, for example: `{"column": "time", "order": "desc"}`. (see [below for nested schema](#nestedblock--widget--group_definition--widget--list_stream_definition--request--query--sort))
 - `storage` (String) Storage location (private beta).
+
+<a id="nestedblock--widget--group_definition--widget--list_stream_definition--request--query--sort"></a>
+### Nested Schema for `widget.group_definition.widget.list_stream_definition.request.query.sort`
+
+Required:
+
+- `column` (String) The facet path for the column.
+- `order` (String) Widget sorting methods. Valid values are `asc`, `desc`.
+
 
 
 
@@ -4837,7 +4859,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -4871,7 +4893,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -5142,6 +5164,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -5456,7 +5479,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -5490,7 +5513,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -5761,6 +5784,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -6174,6 +6198,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -6929,6 +6954,7 @@ Optional:
 - `query` (Block List) (see [below for nested schema](#nestedblock--widget--group_definition--widget--sunburst_definition--request--query))
 - `rum_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--sunburst_definition--request--rum_query))
 - `security_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--sunburst_definition--request--security_query))
+- `style` (Block List, Max: 1) Define style for the widget's request. (see [below for nested schema](#nestedblock--widget--group_definition--widget--sunburst_definition--request--style))
 
 <a id="nestedblock--widget--group_definition--widget--sunburst_definition--request--apm_query"></a>
 ### Nested Schema for `widget.group_definition.widget.sunburst_definition.request.apm_query`
@@ -7078,7 +7104,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -7413,6 +7439,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -7547,6 +7574,14 @@ Optional:
 
 
 
+<a id="nestedblock--widget--group_definition--widget--sunburst_definition--request--style"></a>
+### Nested Schema for `widget.group_definition.widget.sunburst_definition.request.style`
+
+Optional:
+
+- `palette` (String) A color palette to apply to the widget. The available options are available at: https://docs.datadoghq.com/dashboards/widgets/timeseries/#appearance.
+
+
 
 
 <a id="nestedblock--widget--group_definition--widget--timeseries_definition"></a>
@@ -7612,7 +7647,7 @@ Optional:
 
 - `apm_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--timeseries_definition--request--apm_query))
 - `audit_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--timeseries_definition--request--audit_query))
-- `display_type` (String) How to display the marker lines. Valid values are `area`, `bars`, `line`.
+- `display_type` (String) How to display the marker lines. Valid values are `area`, `bars`, `line`, `overlay`.
 - `formula` (Block List) (see [below for nested schema](#nestedblock--widget--group_definition--widget--timeseries_definition--request--formula))
 - `log_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--group_definition--widget--timeseries_definition--request--log_query))
 - `metadata` (Block List) Used to define expression aliases. Multiple `metadata` blocks are allowed using the structure below. (see [below for nested schema](#nestedblock--widget--group_definition--widget--timeseries_definition--request--metadata))
@@ -7773,7 +7808,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -8120,6 +8155,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -8463,7 +8499,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -8497,7 +8533,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -8768,6 +8804,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -9015,7 +9052,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -9208,6 +9245,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -10254,14 +10292,24 @@ Required:
 
 Required:
 
-- `data_source` (String) Source from which to query items to display in the stream. Valid values are `logs_stream`, `audit_stream`, `ci_pipeline_stream`, `ci_test_stream`, `rum_issue_stream`, `apm_issue_stream`, `logs_issue_stream`, `logs_pattern_stream`, `logs_transaction_stream`, `event_stream`.
+- `data_source` (String) Source from which to query items to display in the stream. Valid values are `logs_stream`, `audit_stream`, `ci_pipeline_stream`, `ci_test_stream`, `rum_issue_stream`, `apm_issue_stream`, `trace_stream`, `logs_issue_stream`, `logs_pattern_stream`, `logs_transaction_stream`, `event_stream`.
 
 Optional:
 
 - `event_size` (String) Size of events displayed in widget. Required if `data_source` is `event_stream`. Valid values are `s`, `l`.
 - `indexes` (List of String) List of indexes.
 - `query_string` (String) Widget query.
+- `sort` (Block List, Max: 1) The facet and order to sort the data, for example: `{"column": "time", "order": "desc"}`. (see [below for nested schema](#nestedblock--widget--list_stream_definition--request--query--sort))
 - `storage` (String) Storage location (private beta).
+
+<a id="nestedblock--widget--list_stream_definition--request--query--sort"></a>
+### Nested Schema for `widget.list_stream_definition.request.query.sort`
+
+Required:
+
+- `column` (String) The facet path for the column.
+- `order` (String) Widget sorting methods. Valid values are `asc`, `desc`.
+
 
 
 
@@ -10478,7 +10526,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -10512,7 +10560,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -10783,6 +10831,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -11097,7 +11146,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -11131,7 +11180,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -11402,6 +11451,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -11815,6 +11865,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -12570,6 +12621,7 @@ Optional:
 - `query` (Block List) (see [below for nested schema](#nestedblock--widget--sunburst_definition--request--query))
 - `rum_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--sunburst_definition--request--rum_query))
 - `security_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--sunburst_definition--request--security_query))
+- `style` (Block List, Max: 1) Define style for the widget's request. (see [below for nested schema](#nestedblock--widget--sunburst_definition--request--style))
 
 <a id="nestedblock--widget--sunburst_definition--request--apm_query"></a>
 ### Nested Schema for `widget.sunburst_definition.request.apm_query`
@@ -12719,7 +12771,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -13054,6 +13106,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -13188,6 +13241,14 @@ Optional:
 
 
 
+<a id="nestedblock--widget--sunburst_definition--request--style"></a>
+### Nested Schema for `widget.sunburst_definition.request.style`
+
+Optional:
+
+- `palette` (String) A color palette to apply to the widget. The available options are available at: https://docs.datadoghq.com/dashboards/widgets/timeseries/#appearance.
+
+
 
 
 <a id="nestedblock--widget--timeseries_definition"></a>
@@ -13253,7 +13314,7 @@ Optional:
 
 - `apm_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--timeseries_definition--request--apm_query))
 - `audit_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--timeseries_definition--request--audit_query))
-- `display_type` (String) How to display the marker lines. Valid values are `area`, `bars`, `line`.
+- `display_type` (String) How to display the marker lines. Valid values are `area`, `bars`, `line`, `overlay`.
 - `formula` (Block List) (see [below for nested schema](#nestedblock--widget--timeseries_definition--request--formula))
 - `log_query` (Block List, Max: 1) The query to use for this widget. (see [below for nested schema](#nestedblock--widget--timeseries_definition--request--log_query))
 - `metadata` (Block List) Used to define expression aliases. Multiple `metadata` blocks are allowed using the structure below. (see [below for nested schema](#nestedblock--widget--timeseries_definition--request--metadata))
@@ -13414,7 +13475,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -13761,6 +13822,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -14104,7 +14166,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -14138,7 +14200,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -14409,6 +14471,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.
@@ -14656,7 +14719,7 @@ Optional:
 
 Required:
 
-- `comparator` (String) The comparator to use. Valid values are `>`, `>=`, `<`, `<=`.
+- `comparator` (String) The comparator to use. Valid values are `=`, `>`, `>=`, `<`, `<=`.
 - `palette` (String) The color palette to apply. Valid values are `blue`, `custom_bg`, `custom_image`, `custom_text`, `gray_on_white`, `grey`, `green`, `orange`, `red`, `red_on_white`, `white_on_gray`, `white_on_green`, `green_on_white`, `white_on_red`, `white_on_yellow`, `yellow_on_white`, `black_on_light_yellow`, `black_on_light_green`, `black_on_light_red`.
 - `value` (Number) A value for the comparator.
 
@@ -14849,6 +14912,7 @@ Required:
 
 Optional:
 
+- `additional_query_filters` (String) Additional filters applied to the SLO query.
 - `group_mode` (String) Group mode to query measures. Valid values are `overall`, `components`.
 - `name` (String) The name of query for use in formulas.
 - `slo_query_type` (String) type of the SLO to query. Valid values are `metric`.

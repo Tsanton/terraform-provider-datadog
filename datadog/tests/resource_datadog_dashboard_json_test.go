@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestAccDatadogDashboardJSONBasicTimeboard(t *testing.T) {
@@ -131,14 +131,12 @@ func TestAccDatadogDashboardJSONImport(t *testing.T) {
 
 func TestDatadogDashListInDashboardJSON(t *testing.T) {
 	t.Parallel()
-	ctx, accProviders := testAccProviders(context.Background(), t)
+	ctx, providers, accProviders := testAccFrameworkMuxProviders(context.Background(), t)
 	uniqueName := uniqueEntityName(ctx, t)
-	accProvider := testAccProvider(t, accProviders)
-
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: accProviders,
-		CheckDestroy:      testAccCheckDatadogDashListDestroy(accProvider),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: accProviders,
+		CheckDestroy:             testAccCheckDatadogDashListDestroyWithFw(providers.frameworkProvider),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckDatadogDashListConfigInDashboardJSON(uniqueName),

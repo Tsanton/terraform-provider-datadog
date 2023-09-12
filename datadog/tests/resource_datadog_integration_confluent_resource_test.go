@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/terraform-providers/terraform-provider-datadog/datadog/fwprovider"
 	"github.com/terraform-providers/terraform-provider-datadog/datadog/internal/utils"
@@ -33,6 +33,8 @@ func TestAccIntegrationConfluentResourceBasic(t *testing.T) {
 						"datadog_integration_confluent_resource.foo", "tags.*", "mytag"),
 					resource.TestCheckTypeSetElemAttr(
 						"datadog_integration_confluent_resource.foo", "tags.*", "mytag2:myvalue"),
+					resource.TestCheckResourceAttr(
+						"datadog_integration_confluent_resource.foo", "enable_custom_metrics", "false"),
 				),
 			},
 			{
@@ -45,6 +47,8 @@ func TestAccIntegrationConfluentResourceBasic(t *testing.T) {
 						"datadog_integration_confluent_resource.foo", "resource_id", "12345678910"),
 					resource.TestCheckTypeSetElemAttr(
 						"datadog_integration_confluent_resource.foo", "tags.*", "mytag"),
+					resource.TestCheckResourceAttr(
+						"datadog_integration_confluent_resource.foo", "enable_custom_metrics", "true"),
 				),
 			},
 		},
@@ -80,6 +84,7 @@ resource "datadog_integration_confluent_resource" "foo" {
 	resource_id   = "12345678910"
     resource_type = "connector"
     tags = ["mytag"]
+    enable_custom_metrics = true
 }`, uniq)
 }
 

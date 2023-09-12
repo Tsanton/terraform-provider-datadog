@@ -26,71 +26,70 @@ func resourceDatadogIntegrationSlackChannel() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: map[string]*schema.Schema{
-			"channel_name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Slack channel name.",
-			},
-			"account_name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Slack account name.",
-			},
-			"display": {
-				Type:        schema.TypeList,
-				Required:    true,
-				Description: "Configuration options for what is shown in an alert event message.",
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"message": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Description: "Show the main body of the alert event.",
-							Default:     true,
-						},
-						"notified": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Description: "Show the list of @-handles in the alert event.",
-							Default:     true,
-						},
-						"snapshot": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Description: "Show the alert event's snapshot image.",
-							Default:     true,
-						},
-						"tags": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Description: "Show the scopes on which the monitor alerted.",
-							Default:     true,
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				"channel_name": {
+					Type:        schema.TypeString,
+					Required:    true,
+					Description: "Slack channel name.",
+				},
+				"account_name": {
+					Type:        schema.TypeString,
+					Required:    true,
+					ForceNew:    true,
+					Description: "Slack account name.",
+				},
+				"display": {
+					Type:        schema.TypeList,
+					Required:    true,
+					Description: "Configuration options for what is shown in an alert event message.",
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"message": {
+								Type:        schema.TypeBool,
+								Optional:    true,
+								Description: "Show the main body of the alert event.",
+								Default:     true,
+							},
+							"notified": {
+								Type:        schema.TypeBool,
+								Optional:    true,
+								Description: "Show the list of @-handles in the alert event.",
+								Default:     true,
+							},
+							"snapshot": {
+								Type:        schema.TypeBool,
+								Optional:    true,
+								Description: "Show the alert event's snapshot image.",
+								Default:     true,
+							},
+							"tags": {
+								Type:        schema.TypeBool,
+								Optional:    true,
+								Description: "Show the scopes on which the monitor alerted.",
+								Default:     true,
+							},
 						},
 					},
 				},
-			},
+			}
 		},
 	}
 }
 
 func buildDatadogSlackChannel(d *schema.ResourceData) *datadogV1.SlackIntegrationChannel {
-	k := utils.NewResourceDataKey(d, "")
 	datadogSlackChannel := datadogV1.NewSlackIntegrationChannelWithDefaults()
 
-	if v, ok := k.GetOkWith("channel_name"); ok {
+	if v, ok := d.GetOk("channel_name"); ok {
 		datadogSlackChannel.SetName(v.(string))
 	}
 
-	k.Add("display.0")
 	resultDisplay := datadogV1.NewSlackIntegrationChannelDisplayWithDefaults()
-	resultDisplay.SetMessage(k.GetWith("message").(bool))
-	resultDisplay.SetNotified(k.GetWith("notified").(bool))
-	resultDisplay.SetSnapshot(k.GetWith("snapshot").(bool))
-	resultDisplay.SetTags(k.GetWith("tags").(bool))
-	k.Remove("display.0")
+	resultDisplay.SetMessage(d.Get("display.0.message").(bool))
+	resultDisplay.SetNotified(d.Get("display.0.notified").(bool))
+	resultDisplay.SetSnapshot(d.Get("display.0.snapshot").(bool))
+	resultDisplay.SetTags(d.Get("display.0.tags").(bool))
 
 	datadogSlackChannel.SetDisplay(*resultDisplay)
 

@@ -18,38 +18,41 @@ func dataSourceDatadogRoles() *schema.Resource {
 	return &schema.Resource{
 		Description: "Use this data source to retrieve information about multiple roles for use in other resources.",
 		ReadContext: dataSourceDatadogRolesRead,
-		Schema: map[string]*schema.Schema{
-			"filter": {
-				Description: "Filter all roles by the given string.",
-				Type:        schema.TypeString,
-				Optional:    true,
-			},
 
-			// Computed values
-			"roles": {
-				Description: "List of Roles",
-				Type:        schema.TypeList,
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Description: "ID of the Datadog role",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"name": {
-							Description: "Name of the Datadog role",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"user_count": {
-							Description: "Number of users that have this role.",
-							Type:        schema.TypeInt,
-							Computed:    true,
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				"filter": {
+					Description: "Filter all roles by the given string.",
+					Type:        schema.TypeString,
+					Optional:    true,
+				},
+
+				// Computed values
+				"roles": {
+					Description: "List of Roles",
+					Type:        schema.TypeList,
+					Computed:    true,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"id": {
+								Description: "ID of the Datadog role",
+								Type:        schema.TypeString,
+								Computed:    true,
+							},
+							"name": {
+								Description: "Name of the Datadog role",
+								Type:        schema.TypeString,
+								Computed:    true,
+							},
+							"user_count": {
+								Description: "Number of users that have this role.",
+								Type:        schema.TypeInt,
+								Computed:    true,
+							},
 						},
 					},
 				},
-			},
+			}
 		},
 	}
 }
@@ -80,9 +83,6 @@ func dataSourceDatadogRolesRead(ctx context.Context, d *schema.ResourceData, met
 		if err != nil {
 			return utils.TranslateClientErrorDiag(err, httpresp, "error querying roles")
 		}
-		if err := utils.CheckForUnparsed(rolesResp); err != nil {
-			return diag.FromErr(err)
-		}
 
 		roles = append(roles, rolesResp.GetData()...)
 
@@ -98,8 +98,18 @@ func dataSourceDatadogRolesRead(ctx context.Context, d *schema.ResourceData, met
 		return diag.Errorf("your query returned no result, please try a less specific search criteria")
 	}
 
+	diags := diag.Diagnostics{}
 	tfRoles := make([]map[string]interface{}, 0, len(roles))
 	for _, role := range roles {
+		if err := utils.CheckForUnparsed(role); err != nil {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  fmt.Sprintf("skipping role with id: %s", role.GetId()),
+				Detail:   fmt.Sprintf("role contains unparsed object: %v", err),
+			})
+			continue
+		}
+
 		attributes := role.GetAttributes()
 		tfRoles = append(tfRoles, map[string]interface{}{
 			"id":         role.GetId(),
@@ -112,7 +122,7 @@ func dataSourceDatadogRolesRead(ctx context.Context, d *schema.ResourceData, met
 	}
 	d.SetId(computeRolesDataSourceID(filterPtr))
 
-	return nil
+	return diags
 }
 
 func computeRolesDataSourceID(filter *string) string {

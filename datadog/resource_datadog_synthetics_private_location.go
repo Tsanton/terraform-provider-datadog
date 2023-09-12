@@ -10,7 +10,7 @@ import (
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV1"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -24,38 +24,40 @@ func resourceDatadogSyntheticsPrivateLocation() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: map[string]*schema.Schema{
-			"name": {
-				Description: "Synthetics private location name.",
-				Type:        schema.TypeString,
-				Required:    true,
-			},
-			"description": {
-				Description: "Description of the private location.",
-				Type:        schema.TypeString,
-				Optional:    true,
-			},
-			"tags": {
-				Description: "A list of tags to associate with your synthetics private location.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-			"config": {
-				Description: "Configuration skeleton for the private location. See installation instructions of the private location on how to use this configuration.",
-				Type:        schema.TypeString,
-				Computed:    true,
-				Sensitive:   true,
-			},
-			"metadata": {
-				Type:        schema.TypeList,
-				MaxItems:    1,
-				Optional:    true,
-				Description: "The private location metadata",
-				Elem: &schema.Resource{
-					Schema: syntheticsPrivateLocationMetadata(),
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				"name": {
+					Description: "Synthetics private location name.",
+					Type:        schema.TypeString,
+					Required:    true,
 				},
-			},
+				"description": {
+					Description: "Description of the private location.",
+					Type:        schema.TypeString,
+					Optional:    true,
+				},
+				"tags": {
+					Description: "A list of tags to associate with your synthetics private location.",
+					Type:        schema.TypeList,
+					Optional:    true,
+					Elem:        &schema.Schema{Type: schema.TypeString},
+				},
+				"config": {
+					Description: "Configuration skeleton for the private location. See installation instructions of the private location on how to use this configuration.",
+					Type:        schema.TypeString,
+					Computed:    true,
+					Sensitive:   true,
+				},
+				"metadata": {
+					Type:        schema.TypeList,
+					MaxItems:    1,
+					Optional:    true,
+					Description: "The private location metadata",
+					Elem: &schema.Resource{
+						Schema: syntheticsPrivateLocationMetadata(),
+					},
+				},
+			}
 		},
 	}
 }
@@ -88,17 +90,17 @@ func resourceDatadogSyntheticsPrivateLocationCreate(ctx context.Context, d *sche
 
 	var getSyntheticsPrivateLocationRespone datadogV1.SyntheticsPrivateLocation
 	var httpResponseGet *http.Response
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 		getSyntheticsPrivateLocationRespone, httpResponseGet, err = apiInstances.GetSyntheticsApiV1().GetPrivateLocation(auth, *createdSyntheticsPrivateLocationResponse.PrivateLocation.Id)
 		if err != nil {
 			if httpResponseGet != nil && httpResponseGet.StatusCode == 404 {
-				return resource.RetryableError(fmt.Errorf("synthetics private location not created yet"))
+				return retry.RetryableError(fmt.Errorf("synthetics private location not created yet"))
 			}
 
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 		if err := utils.CheckForUnparsed(getSyntheticsPrivateLocationRespone); err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		return nil
