@@ -57,7 +57,7 @@ func (r *IdpMetadataResource) Configure(_ context.Context, request resource.Conf
 }
 
 func (r *IdpMetadataResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
-	response.TypeName = request.ProviderTypeName + "idp_metadata"
+	response.TypeName = "idp_metadata"
 }
 
 func (r *IdpMetadataResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
