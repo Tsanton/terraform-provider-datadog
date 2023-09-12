@@ -3,7 +3,6 @@ package fwprovider
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -22,7 +20,6 @@ import (
 
 var (
 	_ resource.ResourceWithConfigure = &IdpMetadataResource{}
-	// _ resource.ResourceWithImportState = &IdpMetadataResource{}
 )
 
 func NewIdpMetadataResource() resource.Resource {
@@ -37,10 +34,10 @@ type IdpMetadataResource struct {
 
 type IdpMetadataModel struct {
 	ID                 types.String `tfsdk:"id"`
-	OrganizationName   types.String `tfsdk:"name"`
 	PublicId           types.String `tfsdk:"public_id"`
 	FederationMetadata types.String `tfsdk:"idp_federation_metadata_xml"`
-	Uploaded           types.Bool   `tfsdk:"federation_metadata_xml_uploaded"`
+	SamlIdpEndpoint    types.String `tfsdk:"saml_idp_endpoint"`
+	SamlLoginUrl       types.String `tfsdk:"saml_login_url"`
 }
 
 func (r *IdpMetadataResource) Configure(_ context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -67,8 +64,8 @@ func (r *IdpMetadataResource) Schema(_ context.Context, _ resource.SchemaRequest
 	response.Schema = schema.Schema{
 		Description: "Provides a Datadog Idp Metadata resource. This can be used to create and manage Datadog SAML metadata.",
 		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
-				Description: "Name for Organization.",
+			"public_id": schema.StringAttribute{
+				Description: "The `public_id` of the organization you are operating within.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -76,22 +73,22 @@ func (r *IdpMetadataResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"idp_federation_metadata_xml": schema.StringAttribute{
 				Description: "XXXXXXXXXXXXXXX",
-				Optional:    true,
+				Required:    true,
 				Sensitive:   true,
+			},
+			"saml_idp_endpoint": schema.StringAttribute{
+				Description: "We're only able to read and see if the SAML metadata is uploaded. If SAML IdP endpoint has changed, it indicates that a change has been made to the Metadata file outside of Terraform.",
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"federation_metadata_xml_uploaded": schema.BoolAttribute{
-				Description: "We're only able to read and see if the SAML metadata is uploaded. If in state but removed on server: replace",
+			"saml_login_url": schema.StringAttribute{
+				Description: "We're only able to read and see if the SAML metadata is uploaded. If SAML login url has changed, it indicates that a change has been made to the Metadata file outside of Terraform.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
-			},
-			"public_id": schema.StringAttribute{
-				Description: "The `public_id` of the organization you are operating within.",
-				Computed:    true,
 			},
 			// Resource ID
 			"id": utils.ResourceIDAttribute(),
@@ -111,19 +108,13 @@ func (r *IdpMetadataResource) Create(ctx context.Context, request resource.Creat
 		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error uploading idp metadata"))
 		return
 	}
-
-	publicId, err := r.getPublicId(ctx, &plan)
-	if err != nil {
-		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error uploading idp metadata"))
-		return
-	}
 	_, err = r.ApiV2.UploadIdPMetadata(ctx, *datadogV2.NewUploadIdPMetadataOptionalParameters().WithIdpFile(idpFile))
 	if err != nil {
 		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error uploading idp metadata"))
 		return
 	}
 
-	resp, httpResponse, err := r.ApiV1.GetOrg(ctx, publicId)
+	resp, httpResponse, err := r.ApiV1.GetOrg(ctx, plan.PublicId.ValueString())
 	if err != nil {
 		if httpResponse != nil && httpResponse.StatusCode == 404 {
 			response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error verifying idp metadata upload"))
@@ -137,12 +128,10 @@ func (r *IdpMetadataResource) Create(ctx context.Context, request resource.Creat
 	var buf bytes.Buffer
 	_, _ = io.Copy(&buf, idpFile)
 	plan.FederationMetadata = types.StringValue(buf.String())
-	plan.PublicId = types.StringValue(publicId)
 
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 }
 
-// As we're not able to rea
 func (r *IdpMetadataResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
 	var state IdpMetadataModel
 	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
@@ -162,12 +151,43 @@ func (r *IdpMetadataResource) Read(ctx context.Context, request resource.ReadReq
 
 	r.updateState(&state, &resp)
 
-	// Save data into Terraform state
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (r *IdpMetadataResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	//all changes require replace
+	var state IdpMetadataModel
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	idpFile, err := r.contentToFilePointer(state.FederationMetadata.ValueString())
+	if err != nil {
+		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error uploading idp metadata"))
+		return
+	}
+	_, err = r.ApiV2.UploadIdPMetadata(ctx, *datadogV2.NewUploadIdPMetadataOptionalParameters().WithIdpFile(idpFile))
+	if err != nil {
+		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error uploading idp metadata"))
+		return
+	}
+
+	resp, httpResponse, err := r.ApiV1.GetOrg(ctx, state.PublicId.ValueString())
+	if err != nil {
+		if httpResponse != nil && httpResponse.StatusCode == 404 {
+			response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error verifying idp metadata upload"))
+			return
+		}
+		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error getting organization"))
+		return
+	}
+
+	r.updateState(&state, &resp)
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, idpFile)
+	state.FederationMetadata = types.StringValue(buf.String())
+
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (r *IdpMetadataResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -176,20 +196,41 @@ func (r *IdpMetadataResource) Delete(ctx context.Context, request resource.Delet
 	if response.Diagnostics.HasError() {
 		return
 	}
-	// content, err := r.contentToFilePointer("{}")
-	// if err != nil {
-	// 	response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error generating delete idp content body"))
-	// 	return
-	// }
+	emptyMetadata := strings.TrimSpace(`
+<?xml version="1.0" encoding="utf-8"?>
+<EntityDescriptor ID="deleted" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+	<IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+		<SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://deleted.idp/sso/redirect" />
+		<SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://deleted.idp/sso/post" />
+		<KeyDescriptor use="signing">
+			<ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+				<ds:X509Data>
+					<ds:X509Certificate>
+						DELETED
+					</ds:X509Certificate>
+				</ds:X509Data>
+			</ds:KeyInfo>
+		</KeyDescriptor>
+	</IDPSSODescriptor>
+	<SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+		<AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://deleted.url/acs" index="0" isDefault="true" />
+	</SPSSODescriptor>
+	</EntityDescriptor>
+`)
+	content, err := r.contentToFilePointer(emptyMetadata)
+	if err != nil {
+		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error generating delete idp content body"))
+		return
+	}
 
-	// _, err = r.ApiV2.UploadIdPMetadata(ctx, *datadogV2.NewUploadIdPMetadataOptionalParameters().WithIdpFile(content))
-	// if err != nil {
-	// 	response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error deleting idp metadata"))
-	// 	return
-	// }
+	_, err = r.ApiV2.UploadIdPMetadata(ctx, *datadogV2.NewUploadIdPMetadataOptionalParameters().WithIdpFile(content))
+	if err != nil {
+		response.Diagnostics.Append(utils.FrameworkErrorDiag(err, "error deleting idp metadata"))
+		return
+	}
 }
 
-// //Nothing to import as it's not possible to read the uploaded SAML manifest content
+// /* Nothing to import as it's not possible to read the uploaded SAML manifest content */
 // func (r *IdpMetadataResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 // 	resource.ImportStatePassthroughID(ctx, frameworkPath.Root("id"), request, response)
 // }
@@ -217,36 +258,7 @@ func (r *IdpMetadataResource) contentToFilePointer(content string) (*os.File, er
 	return file, nil
 }
 
-func (r *IdpMetadataResource) filePathToFilePointer(filePath string) (*os.File, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	return file, nil
-}
-
-func (r *IdpMetadataResource) getPublicId(ctx context.Context, plan *IdpMetadataModel) (string, error) {
-	resp, _, err := r.ApiV1.ListOrgs(ctx)
-	if err != nil {
-		return "", fmt.Errorf("error getting organizations: %w", err)
-	}
-
-	orgs := resp.GetOrgs()
-	if len(orgs) == 0 {
-		return "", fmt.Errorf("no organizations available: %w", err)
-	}
-
-	orgName := strings.ToUpper(plan.OrganizationName.ValueString())
-	for _, org := range orgs {
-		if strings.ToUpper(*org.Name) == orgName {
-			return *org.PublicId, nil
-		}
-
-	}
-	return "", fmt.Errorf("no organization available")
-}
-
-func (r *IdpMetadataResource) updateState(state *IdpMetadataModel, org *datadogV1.OrganizationResponse) {
-	o := org.GetOrg().Settings.GetSaml()
-	state.Uploaded = types.BoolValue(o.GetEnabled())
+func (r *IdpMetadataResource) updateState(state *IdpMetadataModel, o *datadogV1.OrganizationResponse) {
+	state.SamlIdpEndpoint = types.StringValue(o.Org.Settings.GetSamlIdpEndpoint())
+	state.SamlLoginUrl = types.StringValue(o.Org.Settings.GetSamlLoginUrl())
 }
